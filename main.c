@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <unistd.h>
+#include <pthread.h>
 
 void Ouverture(int *valeurs)
 {
@@ -286,6 +287,24 @@ int EvolutionSeq(int *valeurs, int **reseau)
     return 0;
 }
 
+void GenerationThreads(int *valeurs, int **reseau, int **ListeVehicules)
+{
+    int cpt = 0;
+    for (int i = 0; i < valeurs[0]; i++)
+    {
+        for (int j = 0; j < valeurs[1]; j++)
+        {
+            if (reseau[i][j] == 3 || reseau[i][j] == 4)
+            {
+                ListeVehicules[cpt][0] = i;
+                ListeVehicules[cpt][1] = j;
+                ListeVehicules[cpt][2] = reseau[i][j];
+                cpt++;
+            }
+        }
+    }
+}
+
 int main()
 {
     /*Définition des variables principales*/
@@ -325,6 +344,17 @@ int main()
             evo = EvolutionSeq(valeurs, reseau);
             Affichage(valeurs, reseau);
         }
+    }
+    else if (menu == 2)
+    {
+        Generation(valeurs, reseau);
+        int **ListeVehicules = (int **)malloc(valeurs[2] * sizeof(int *));
+        for (int i = 0; i < valeurs[2]; i++)
+        {
+            ListeVehicules[i] = (int *)malloc(3 * sizeof(int));
+        }
+        GenerationThreads(valeurs, reseau, ListeVehicules);
+        Affichage(valeurs,reseau);
     }
     return 0;
 }
