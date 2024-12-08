@@ -51,7 +51,7 @@ void Generation(int *valeurs, int **reseau)
     for (int i = 0; i < valeurs[3]; i++)
     {
         /*Création des routes horizontales*/
-        int ligne = rand() % valeurs[0];
+        int ligne = (rand() % (valeurs[0] - 2)) + 1;
         while (isInDoubles(doubles_L, i, ligne))
         {
             ligne = rand() % valeurs[0];
@@ -66,7 +66,7 @@ void Generation(int *valeurs, int **reseau)
     for (int j = 0; j < valeurs[4]; j++)
     {
         /*Création des routes verticales*/
-        int colonne = rand() % valeurs[1];
+        int colonne = (rand() % (valeurs[1] - 2)) + 1;
         while (isInDoubles(doubles_C, j, colonne))
         {
             colonne = rand() % valeurs[1];
@@ -77,6 +77,8 @@ void Generation(int *valeurs, int **reseau)
             if (reseau[i][colonne] == 1)
             {
                 reseau[i][colonne] = 5;
+                reseau[i - 1][colonne - 1] = 51;
+                reseau[i + 1][colonne + 1] = 52;
             }
             else
             {
@@ -90,7 +92,7 @@ void Generation(int *valeurs, int **reseau)
         /*Création des vehicules*/
         int ligne = rand() % valeurs[0];
         int colonne = rand() % valeurs[1];
-        while (reseau[ligne][colonne] == 3 || reseau[ligne][colonne] < 1)
+        while (reseau[ligne][colonne] > 2 || reseau[ligne][colonne] < 1)
         {
             colonne = rand() % valeurs[1];
             ligne = rand() % valeurs[0];
@@ -135,9 +137,17 @@ void Affichage(int *valeurs, int **reseau)
             {
                 printf("*");
             }
-            else if (reseau[i][j] == 5)
+            else if (reseau[i][j] == 5 || reseau[i][j] == 6)
             {
                 printf("+");
+            }
+            else if (reseau[i][j] == 51 || reseau[i][j] == 62)
+            {
+                printf("V");
+            }
+            else if (reseau[i][j] == 52 || reseau[i][j] == 61)
+            {
+                printf("R");
             }
             else
             {
@@ -146,6 +156,7 @@ void Affichage(int *valeurs, int **reseau)
         }
         printf("\n");
     }
+    printf("\n\n\n");
     sleep(1);
 }
 
@@ -157,13 +168,13 @@ int EvolutionLigne(int i, int *valeurs, int **reseau)
         if (reseau[i][k] == 3)
         {
 
-            if (reseau[(i + 1) % valeurs[0]][k] != 0)
+            if (reseau[i + 1][k] == 0 || reseau[i + 1][k] > 10)
             {
-                prec = 5;
+                prec = 1;
             }
             else
             {
-                prec = 1;
+                prec = 5;
             }
             if (k + 1 < valeurs[1])
             {
@@ -190,13 +201,13 @@ int EvolutionColonne(int j, int *valeurs, int **reseau)
         if (reseau[k][j] == 4)
         {
 
-            if (reseau[k][(j + 1) % valeurs[1]] != 0)
+            if (reseau[k][j + 1] == 0 || reseau[k][j + 1] > 10)
             {
-                prec = 5;
+                prec = 2;
             }
             else
             {
-                prec = 2;
+                prec = 5;
             }
 
             if (k + 1 < valeurs[0])
@@ -215,7 +226,30 @@ int EvolutionColonne(int j, int *valeurs, int **reseau)
     }
     return (0);
 }
-
+int changeFeu(int *valeurs, int **reseau)
+{
+    int evo = 0;
+    for (int i = 0; i < valeurs[0]; i++)
+        for (int j = 0; j < valeurs[1]; j++)
+        {
+            if (reseau[i][j] == 5)
+            {
+                reseau[i][j] = 6;
+                evo = 1;
+            }
+            else if (reseau[i][j] == 51)
+            {
+                reseau[i][j] = 61;
+                evo = 1;
+            }
+            else if (reseau[i][j] == 52)
+            {
+                reseau[i][j] = 62;
+                evo = 1;
+            }
+        }
+    return evo;
+}
 int EvolutionSeq(int *valeurs, int **reseau)
 {
     int evo = 0;
@@ -223,7 +257,7 @@ int EvolutionSeq(int *valeurs, int **reseau)
     int colonnes = valeurs[1];
     for (int i = 0; i < lignes; i++)
     {
-        if (reseau[i][0] > 0)
+        if (reseau[i][0] > 0 && reseau[i][0] < 10)
         {
             evo = EvolutionLigne(i, valeurs, reseau);
             if (evo != 0)
@@ -232,10 +266,15 @@ int EvolutionSeq(int *valeurs, int **reseau)
             }
         }
     }
+    evo = changeFeu(valeurs, reseau);
+    if (evo != 0)
+    {
+        return 1;
+    }
 
     for (int j = 0; j < colonnes; j++)
     {
-        if (reseau[0][j] > 0)
+        if (reseau[0][j] > 0 && reseau[0][j] < 10)
         {
             evo = EvolutionColonne(j, valeurs, reseau);
             if (evo != 0)
