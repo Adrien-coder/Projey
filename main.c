@@ -310,13 +310,21 @@ int main()
         }
     }
 
-    Generation(valeurs, reseau);
-    Affichage(valeurs, reseau);
-    int evo = 1;
-    while (evo != 0)
+    // Menu
+    printf("Choisir le mode de simulation :\n 1 - Mode 1 : version sequentielle\n 2 - Mode 2 : version threads\n");
+    int menu;
+    scanf("%d", &menu);
+    if (menu == 1)
     {
-        evo = EvolutionSeq(valeurs, reseau);
+
+        Generation(valeurs, reseau);
         Affichage(valeurs, reseau);
+        int evo = 1;
+        while (evo != 0)
+        {
+            evo = EvolutionSeq(valeurs, reseau);
+            Affichage(valeurs, reseau);
+        }
     }
     return 0;
 }
