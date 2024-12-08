@@ -74,7 +74,14 @@ void Generation(int *valeurs, int **reseau)
         doubles_C[j] = colonne;
         for (int i = 0; i < valeurs[0]; i++)
         {
-            reseau[i][colonne] = 2;
+            if (reseau[i][colonne] == 1)
+            {
+                reseau[i][colonne] = 5;
+            }
+            else
+            {
+                reseau[i][colonne] = 2;
+            }
         }
     }
 
@@ -88,11 +95,11 @@ void Generation(int *valeurs, int **reseau)
             colonne = rand() % valeurs[1];
             ligne = rand() % valeurs[0];
         }
-        if (reseau[ligne][colonne] == 1) //Si la voiture est sur un Ouest-Est
+        if (reseau[ligne][colonne] == 1) // Si la voiture est sur un Ouest-Est
         {
             reseau[ligne][colonne] = 3;
         }
-        if (reseau[ligne][colonne] == 2) //Si la voiture est sur un Nord-Sud
+        if (reseau[ligne][colonne] == 2) // Si la voiture est sur un Nord-Sud
         {
             reseau[ligne][colonne] = 4;
         }
@@ -124,9 +131,13 @@ void Affichage(int *valeurs, int **reseau)
             {
                 printf("|");
             }
-            else if (reseau[i][j] == 3 ||reseau[i][j] == 4)
+            else if (reseau[i][j] == 3 || reseau[i][j] == 4)
             {
                 printf("*");
+            }
+            else if (reseau[i][j] == 5)
+            {
+                printf("+");
             }
             else
             {
@@ -140,19 +151,29 @@ void Affichage(int *valeurs, int **reseau)
 
 int EvolutionLigne(int i, int *valeurs, int **reseau)
 {
+    int prec;
     for (int k = valeurs[1] - 1; k >= 0; k--)
     {
         if (reseau[i][k] == 3)
         {
+
+            if (reseau[(i + 1) % valeurs[0]][k] != 0)
+            {
+                prec = 5;
+            }
+            else
+            {
+                prec = 1;
+            }
             if (k + 1 < valeurs[1])
             {
+                reseau[i][k] = prec;
                 reseau[i][k + 1] = 3;
-                reseau[i][k] = 1;
                 return 1;
             }
             else
             {
-                reseau[i][k] = 1;
+                reseau[i][k] = prec;
                 valeurs[2]--;
                 return 1;
             }
@@ -163,21 +184,32 @@ int EvolutionLigne(int i, int *valeurs, int **reseau)
 
 int EvolutionColonne(int j, int *valeurs, int **reseau)
 {
+    int prec;
     for (int k = valeurs[0] - 1; k >= 0; k--)
     {
         if (reseau[k][j] == 4)
         {
-            if (k + 1 < valeurs[0])
+
+            if (reseau[k][(j + 1) % valeurs[1]] != 0)
             {
-                reseau[k + 1][j] = 4;
-                reseau[k][j] = 2;
-                return (1);
+                prec = 5;
             }
             else
             {
-                reseau[k][j] = 2;
+                prec = 2;
+            }
+
+            if (k + 1 < valeurs[0])
+            {
+                reseau[k][j] = prec;
+                reseau[k + 1][j] = 4;
+                return 1;
+            }
+            else
+            {
+                reseau[k][j] = prec;
                 valeurs[2]--;
-                return (1);
+                return 1;
             }
         }
     }
@@ -189,24 +221,24 @@ int EvolutionSeq(int *valeurs, int **reseau)
     int evo = 0;
     int lignes = valeurs[0];
     int colonnes = valeurs[1];
-
-    for (int j = 0; j < colonnes; j++)
+    for (int i = 0; i < lignes; i++)
     {
-        if (reseau[0][j] == 1 || 2 || 3 || 4)
+        if (reseau[i][0] > 0)
         {
-            evo = EvolutionColonne(j, valeurs, reseau);
-            if (evo)
+            evo = EvolutionLigne(i, valeurs, reseau);
+            if (evo != 0)
             {
                 return 1;
             }
         }
     }
-    for (int i = 0; i < lignes; i++)
+
+    for (int j = 0; j < colonnes; j++)
     {
-        if (reseau[i][0] == 1 || 2 || 3 || 4)
+        if (reseau[0][j] > 0)
         {
-            evo = EvolutionLigne(i, valeurs, reseau);
-            if (evo)
+            evo = EvolutionColonne(j, valeurs, reseau);
+            if (evo != 0)
             {
                 return 1;
             }
@@ -231,12 +263,20 @@ int main()
     {
         reseau[i] = (int *)malloc(colonnes * sizeof(int));
     }
+    for (int i = 0; i < lignes; i++)
+    {
+        for (int j = 0; j < colonnes; j++)
+        {
+            reseau[i][j] = 0;
+        }
+    }
 
     Generation(valeurs, reseau);
     Affichage(valeurs, reseau);
-    while (valeurs[2]!=0)
+    int evo = 1;
+    while (evo != 0)
     {
-        EvolutionSeq(valeurs, reseau);
+        evo = EvolutionSeq(valeurs, reseau);
         Affichage(valeurs, reseau);
     }
     return 0;
