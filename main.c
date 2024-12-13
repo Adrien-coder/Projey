@@ -66,9 +66,14 @@ void Generation(plateau p)
     {
         /*Création des routes horizontales*/
         int ligne = (rand() % (p.valeurs[0] - 2)) + 1;
-        while (isInDoubles(doubles_L, i, ligne))
+        while (isInDoubles(doubles_L, i, ligne)
+        ||p.reseau[(p.valeurs[0]+ligne+1)%p.valeurs[0]][0]==1
+        ||p.reseau[(p.valeurs[0]+ligne+2)%p.valeurs[0]][0]==1
+        ||p.reseau[(p.valeurs[0]+ligne-1)%p.valeurs[0]][0]==1
+        ||p.reseau[(p.valeurs[0]+ligne-2)%p.valeurs[0]][0]==1
+        )
         {
-            ligne = rand() % p.valeurs[0];
+            ligne = (rand() % (p.valeurs[0] - 2)) + 1;;
         }
         doubles_L[i] = ligne;
         for (int j = 0; j < p.valeurs[1]; j++)
@@ -81,9 +86,13 @@ void Generation(plateau p)
     {
         /*Création des routes verticales*/
         int colonne = (rand() % (p.valeurs[1] - 2)) + 1;
-        while (isInDoubles(doubles_C, j, colonne))
+        while (isInDoubles(doubles_C, j, colonne)
+        ||p.reseau[0][(p.valeurs[1]+colonne+1)%p.valeurs[1]]==2
+        ||p.reseau[0][(p.valeurs[1]+colonne+2)%p.valeurs[1]]==2
+        ||p.reseau[0][(p.valeurs[1]+colonne-1)%p.valeurs[1]]==2
+        ||p.reseau[0][(p.valeurs[1]+colonne-2)%p.valeurs[1]]==2)
         {
-            colonne = rand() % p.valeurs[1];
+            colonne = (rand() % (p.valeurs[1] - 2)) + 1;
         }
         doubles_C[j] = colonne;
         for (int i = 0; i < p.valeurs[0]; i++)
@@ -127,28 +136,25 @@ void Generation_voiture(plateau p)
 
 void Generation_voiture_thread(plateau *p, int *voiture)
 {
-    for (int i = 0; i < p->valeurs[2]; i++)
+    /*Création des vehicules*/
+    int ligne = rand() % p->valeurs[0];
+    int colonne = rand() % p->valeurs[1];
+    while (p->reseau[ligne][colonne] > 2 || p->reseau[ligne][colonne] < 1)
     {
-        /*Création des vehicules*/
-        int ligne = rand() % p->valeurs[0];
-        int colonne = rand() % p->valeurs[1];
-        while (p->reseau[ligne][colonne] > 2 || p->reseau[ligne][colonne] < 1)
-        {
-            colonne = rand() % p->valeurs[1];
-            ligne = rand() % p->valeurs[0];
-        }
-        if (p->reseau[ligne][colonne] == 1) // Si la voiture est sur un Ouest-Est
-        {
-            p->reseau[ligne][colonne] = 3;
-        }
-        if (p->reseau[ligne][colonne] == 2) // Si la voiture est sur un Nord-Sud
-        {
-            p->reseau[ligne][colonne] = 4;
-        }
-        voiture[0] = ligne;
-        voiture[1] = colonne;
-        voiture[2] = p->reseau[ligne][colonne];
+        colonne = rand() % p->valeurs[1];
+        ligne = rand() % p->valeurs[0];
     }
+    if (p->reseau[ligne][colonne] == 1) // Si la voiture est sur un Ouest-Est
+    {
+        p->reseau[ligne][colonne] = 3;
+    }
+    if (p->reseau[ligne][colonne] == 2) // Si la voiture est sur un Nord-Sud
+    {
+        p->reseau[ligne][colonne] = 4;
+    }
+    voiture[0] = ligne;
+    voiture[1] = colonne;
+    voiture[2] = p->reseau[ligne][colonne];
 }
 
 void clearScreen()
@@ -176,21 +182,37 @@ void Affichage(plateau p)
             {
                 printf("|");
             }
-            else if (p.reseau[i][j] == 3 || p.reseau[i][j] == 4)
+            else if (p.reseau[i][j] == 3)
             {
                 printf("*");
             }
-            else if (p.reseau[i][j] == 5 || p.reseau[i][j] == 6)
+            else if (p.reseau[i][j] == 4)
+            {
+                printf("*");
+            }
+            else if (p.reseau[i][j] == 5)
             {
                 printf("+");
             }
-            else if (p.reseau[i][j] == 51 || p.reseau[i][j] == 62)
+            else if (p.reseau[i][j] == 6)
             {
-                printf("V");
+                printf("+");
             }
-            else if (p.reseau[i][j] == 52 || p.reseau[i][j] == 61)
+            else if (p.reseau[i][j] == 51)
             {
-                printf("R");
+                printf("V");//V
+            }
+            else if (p.reseau[i][j] == 62)
+            {
+                printf("V");//V
+            }
+            else if (p.reseau[i][j] == 52)
+            {
+                printf("R");//R
+            }
+            else if (p.reseau[i][j] == 61)
+            {
+                printf("R");//R
             }
             else
             {
@@ -200,7 +222,6 @@ void Affichage(plateau p)
         printf("\n");
     }
     printf("\n\n\n");
-    sleep(1);
 }
 
 int EvolutionLigne(int i, plateau p)
@@ -250,7 +271,7 @@ int EvolutionColonne(int j, plateau p)
             }
             else
             {
-                prec = 5;
+                prec = 6;
             }
 
             if (k + 1 < p.valeurs[0])
@@ -350,75 +371,127 @@ void GenerationThreads(plateau p, int **ListeVehicules)
 void *sequ_feux(void *arg)
 {
     plateau *p = (plateau *)arg;
-    sleep(5);
     pthread_mutex_lock(&dmutex);
-    for (int i = 0; i < p->valeurs[0]; i++)
+    int condition=1;
+    pthread_mutex_unlock(&dmutex);
+    while (condition)
     {
-        for (int j = 0; j < p->valeurs[1]; j++)
+        sleep(5);
+        pthread_mutex_lock(&dmutex);
+        for (int i = 0; i < p->valeurs[0]; i++)
         {
-            if (p->reseau[i][j] == 5)
+            for (int j = 0; j < p->valeurs[1]; j++)
             {
-                p->reseau[i][j] = 6;
-            }
-            else if (p->reseau[i][j] == 51)
-            {
-                p->reseau[i][j] = 61;
-            }
-            else if (p->reseau[i][j] == 52)
-            {
-                p->reseau[i][j] = 62;
-            }
-            else if (p->reseau[i][j] == 6)
-            {
-                p->reseau[i][j] = 5;
-            }
-            else if (p->reseau[i][j] == 61)
-            {
-                p->reseau[i][j] = 51;
-            }
-            else if (p->reseau[i][j] == 62)
-            {
-                p->reseau[i][j] = 52;
+                if (p->reseau[i][j] == 5)
+                {
+                    p->reseau[i][j] = 6;
+                }
+                else if (p->reseau[i][j] == 51)
+                {
+                    p->reseau[i][j] = 61;
+                }
+                else if (p->reseau[i][j] == 52)
+                {
+                    p->reseau[i][j] = 62;
+                }
+                else if (p->reseau[i][j] == 6)
+                {
+                    p->reseau[i][j] = 5;
+                }
+                else if (p->reseau[i][j] == 61)
+                {
+                    p->reseau[i][j] = 51;
+                }
+                else if (p->reseau[i][j] == 62)
+                {
+                    p->reseau[i][j] = 52;
+                }
             }
         }
+        Affichage(*p);
+        condition=p->valeurs[2];
+        pthread_mutex_unlock(&dmutex);
     }
-    Affichage(*p);
-    pthread_mutex_unlock(&dmutex);
 }
 
 int evo_voiture(plateau p, int *voiture)
 {
-    if (voiture[2] == 3)
+    if (voiture[2] == 3) // La voiture est sur un axe horizontal
     {
-        if (voiture[0] >= (p.valeurs[0]-1))
+        if (voiture[1] >= (p.valeurs[1] - 1)) // La voiture est arrivée au bout
         {
             p.reseau[voiture[0]][voiture[1]] = 1;
             return (0);
         }
         else
         {
-            p.reseau[voiture[0]][voiture[1]] = 1;
-            voiture[0]++;
+            if (p.reseau[voiture[0] + 1][voiture[1] + 1] == 52)
+            { // La voiture est sur une intersection
+                p.reseau[voiture[0]][voiture[1]] = 5;
+            }
+            else if (p.reseau[voiture[0] + 1][voiture[1] + 1] == 62)
+            { // La voiture est sur une intersection
+                p.reseau[voiture[0]][voiture[1]] = 6;
+            }
+            else if (p.reseau[voiture[0]][voiture[1] + 1] == 6)
+            {
+                return (1);
+            }
+            else if (p.reseau[voiture[0]][voiture[1]+1] == 3)
+            {
+                return (1);
+            }
+            else if (p.reseau[voiture[0]][voiture[1]+1] == 4)
+            {
+                return (1);
+            }
+            else
+            {
+                p.reseau[voiture[0]][voiture[1]] = 1;
+            }
+            voiture[1]++;
             p.reseau[voiture[0]][voiture[1]] = 3;
             return (1);
         }
     }
     else if (voiture[2] == 4)
     {
-        if (voiture[1] == p.valeurs[1]-1)
+        if (voiture[0] == p.valeurs[0] - 1)
         {
             p.reseau[voiture[0]][voiture[1]] = 2;
             return (0);
         }
         else
         {
-            p.reseau[voiture[0]][voiture[1]] = 2;
-            voiture[1]++;
-            p.reseau[voiture[0]][voiture[1]] = 3;
+            if (p.reseau[voiture[0] + 1][voiture[1] + 1] == 62)
+            {
+                p.reseau[voiture[0]][voiture[1]] = 6;
+            }
+            else if(p.reseau[voiture[0] + 1][voiture[1] + 1] == 52){
+                p.reseau[voiture[0]][voiture[1]] = 5;
+            }
+            else if (p.reseau[voiture[0] + 1][voiture[1]] == 5)
+            {
+                return (1);
+            }
+            else if (p.reseau[voiture[0] + 1][voiture[1]] == 3)
+            {
+                return (1);
+            }
+            else if (p.reseau[voiture[0] + 1][voiture[1]] == 4)
+            {
+                return (1);
+            }
+            else
+            {
+                p.reseau[voiture[0]][voiture[1]] = 2;
+            }
+            voiture[0]++;
+            p.reseau[voiture[0]][voiture[1]] = 4;
             return (1);
         }
     }
-    return(-1);
+    return (-1);
 }
 
 void *create_voiture(void *arg)
@@ -435,7 +508,11 @@ void *create_voiture(void *arg)
         evo = evo_voiture(*p, voiture);
         Affichage(*p);
         pthread_mutex_unlock(&dmutex);
+        usleep(1000*1000);
     }
+    pthread_mutex_lock(&dmutex);
+    p->valeurs[2]--;
+    pthread_mutex_unlock(&dmutex);
 }
 
 int main()
@@ -477,6 +554,7 @@ int main()
         {
             evo = EvolutionSeq(p);
             Affichage(p);
+            sleep(1);
         }
     }
     else if (menu == 2)
@@ -484,11 +562,19 @@ int main()
         Generation(p);
         Affichage(p);
         pthread_t feux;
-        pthread_t voiture;
+        pthread_t voiture[p.valeurs[2]];
         pthread_create(&feux, NULL, sequ_feux, &p);
-        pthread_create(&voiture, NULL, create_voiture, &p);
-        pthread_join(voiture, NULL);
+        int nb_voiture=p.valeurs[2];
+        for (int i = 0; i < nb_voiture; i++)
+        {
+            pthread_create(&voiture[i], NULL, create_voiture, &p);
+            sleep(1);
+        }
+        for (int i = 0; i < nb_voiture; i++)
+        {
+            pthread_join(voiture[i], NULL);
+        }
         pthread_join(feux, NULL);
-}
+    }
     return 0;
 }
