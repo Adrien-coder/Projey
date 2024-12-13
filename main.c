@@ -4,7 +4,15 @@
 #include <unistd.h>
 #include <pthread.h>
 
-void Ouverture(int *valeurs)
+pthread_mutex_t dmutex = PTHREAD_MUTEX_INITIALIZER;
+
+typedef struct
+{
+    int **reseau;
+    int *valeurs;
+} plateau;
+
+void Ouverture(plateau *p)
 {
     FILE *fichier = fopen("/home/adrien/Prog_C/Projey/setup.txt", "r");
     if (fichier == NULL)
@@ -13,22 +21,27 @@ void Ouverture(int *valeurs)
     }
     else
     {
+        int nb_valeurs = 0;
+        // ... (code pour compter le nombre de valeurs)
 
+        // Allouer de la mémoire pour le tableau de valeurs
+        p->valeurs = (int *)malloc(nb_valeurs * sizeof(int));
+        if (p->valeurs == NULL)
+        {
+            printf("Erreur d'allocation mémoire.\n");
+            return;
+        }
+
+        // Lire les valeurs dans le tableau
         int i = 0;
-
-        while (fscanf(fichier, "%d", &valeurs[i]) == 1)
+        while (fscanf(fichier, "%d", &p->valeurs[i]) == 1)
         {
             i++;
         }
 
         fclose(fichier);
 
-        // Affichage des valeurs (pour vérification)
-        for (int j = 0; j < i; j++)
-        {
-            printf("%d ", valeurs[j]);
-        }
-        printf("\n");
+        // ... (affichage des valeurs)
     }
 }
 
@@ -44,68 +57,97 @@ int isInDoubles(int *doubles, int i, int val)
     return 0;
 }
 
-void Generation(int *valeurs, int **reseau)
+void Generation(plateau p)
 {
-    int doubles_L[valeurs[3]];
-    int doubles_C[valeurs[4]];
+    int doubles_L[p.valeurs[3]];
+    int doubles_C[p.valeurs[4]];
 
-    for (int i = 0; i < valeurs[3]; i++)
+    for (int i = 0; i < p.valeurs[3]; i++)
     {
         /*Création des routes horizontales*/
-        int ligne = (rand() % (valeurs[0] - 2)) + 1;
+        int ligne = (rand() % (p.valeurs[0] - 2)) + 1;
         while (isInDoubles(doubles_L, i, ligne))
         {
-            ligne = rand() % valeurs[0];
+            ligne = rand() % p.valeurs[0];
         }
         doubles_L[i] = ligne;
-        for (int j = 0; j < valeurs[1]; j++)
+        for (int j = 0; j < p.valeurs[1]; j++)
         {
-            reseau[ligne][j] = 1;
+            p.reseau[ligne][j] = 1;
         }
     }
 
-    for (int j = 0; j < valeurs[4]; j++)
+    for (int j = 0; j < p.valeurs[4]; j++)
     {
         /*Création des routes verticales*/
-        int colonne = (rand() % (valeurs[1] - 2)) + 1;
+        int colonne = (rand() % (p.valeurs[1] - 2)) + 1;
         while (isInDoubles(doubles_C, j, colonne))
         {
-            colonne = rand() % valeurs[1];
+            colonne = rand() % p.valeurs[1];
         }
         doubles_C[j] = colonne;
-        for (int i = 0; i < valeurs[0]; i++)
+        for (int i = 0; i < p.valeurs[0]; i++)
         {
-            if (reseau[i][colonne] == 1)
+            if (p.reseau[i][colonne] == 1)
             {
-                reseau[i][colonne] = 5;
-                reseau[i - 1][colonne - 1] = 51;
-                reseau[i + 1][colonne + 1] = 52;
+                p.reseau[i][colonne] = 5;
+                p.reseau[i - 1][colonne - 1] = 51;
+                p.reseau[i + 1][colonne + 1] = 52;
             }
             else
             {
-                reseau[i][colonne] = 2;
+                p.reseau[i][colonne] = 2;
             }
         }
     }
+}
 
-    for (int i = 0; i < valeurs[2]; i++)
+void Generation_voiture(plateau p)
+{
+    for (int i = 0; i < p.valeurs[2]; i++)
     {
         /*Création des vehicules*/
-        int ligne = rand() % valeurs[0];
-        int colonne = rand() % valeurs[1];
-        while (reseau[ligne][colonne] > 2 || reseau[ligne][colonne] < 1)
+        int ligne = rand() % p.valeurs[0];
+        int colonne = rand() % p.valeurs[1];
+        while (p.reseau[ligne][colonne] > 2 || p.reseau[ligne][colonne] < 1)
         {
-            colonne = rand() % valeurs[1];
-            ligne = rand() % valeurs[0];
+            colonne = rand() % p.valeurs[1];
+            ligne = rand() % p.valeurs[0];
         }
-        if (reseau[ligne][colonne] == 1) // Si la voiture est sur un Ouest-Est
+        if (p.reseau[ligne][colonne] == 1) // Si la voiture est sur un Ouest-Est
         {
-            reseau[ligne][colonne] = 3;
+            p.reseau[ligne][colonne] = 3;
         }
-        if (reseau[ligne][colonne] == 2) // Si la voiture est sur un Nord-Sud
+        if (p.reseau[ligne][colonne] == 2) // Si la voiture est sur un Nord-Sud
         {
-            reseau[ligne][colonne] = 4;
+            p.reseau[ligne][colonne] = 4;
         }
+    }
+}
+
+void Generation_voiture_thread(plateau *p, int *voiture)
+{
+    for (int i = 0; i < p->valeurs[2]; i++)
+    {
+        /*Création des vehicules*/
+        int ligne = rand() % p->valeurs[0];
+        int colonne = rand() % p->valeurs[1];
+        while (p->reseau[ligne][colonne] > 2 || p->reseau[ligne][colonne] < 1)
+        {
+            colonne = rand() % p->valeurs[1];
+            ligne = rand() % p->valeurs[0];
+        }
+        if (p->reseau[ligne][colonne] == 1) // Si la voiture est sur un Ouest-Est
+        {
+            p->reseau[ligne][colonne] = 3;
+        }
+        if (p->reseau[ligne][colonne] == 2) // Si la voiture est sur un Nord-Sud
+        {
+            p->reseau[ligne][colonne] = 4;
+        }
+        voiture[0] = ligne;
+        voiture[1] = colonne;
+        voiture[2] = p->reseau[ligne][colonne];
     }
 }
 
@@ -116,37 +158,37 @@ void clearScreen()
         printf("\n\n\n\n\n\n\n\n\n\n");
 }
 
-void Affichage(int *valeurs, int **reseau)
+void Affichage(plateau p)
 {
-    int lignes = valeurs[0];
-    int colonnes = valeurs[1];
+    int lignes = p.valeurs[0];
+    int colonnes = p.valeurs[1];
 
     clearScreen();
     for (int i = 0; i < lignes; i++)
     {
         for (int j = 0; j < colonnes; j++)
         {
-            if (reseau[i][j] == 1)
+            if (p.reseau[i][j] == 1)
             {
                 printf("-");
             }
-            else if (reseau[i][j] == 2)
+            else if (p.reseau[i][j] == 2)
             {
                 printf("|");
             }
-            else if (reseau[i][j] == 3 || reseau[i][j] == 4)
+            else if (p.reseau[i][j] == 3 || p.reseau[i][j] == 4)
             {
                 printf("*");
             }
-            else if (reseau[i][j] == 5 || reseau[i][j] == 6)
+            else if (p.reseau[i][j] == 5 || p.reseau[i][j] == 6)
             {
                 printf("+");
             }
-            else if (reseau[i][j] == 51 || reseau[i][j] == 62)
+            else if (p.reseau[i][j] == 51 || p.reseau[i][j] == 62)
             {
                 printf("V");
             }
-            else if (reseau[i][j] == 52 || reseau[i][j] == 61)
+            else if (p.reseau[i][j] == 52 || p.reseau[i][j] == 61)
             {
                 printf("R");
             }
@@ -161,15 +203,15 @@ void Affichage(int *valeurs, int **reseau)
     sleep(1);
 }
 
-int EvolutionLigne(int i, int *valeurs, int **reseau)
+int EvolutionLigne(int i, plateau p)
 {
     int prec;
-    for (int k = valeurs[1] - 1; k >= 0; k--)
+    for (int k = p.valeurs[1] - 1; k >= 0; k--)
     {
-        if (reseau[i][k] == 3)
+        if (p.reseau[i][k] == 3)
         {
 
-            if (reseau[i + 1][k] == 0 || reseau[i + 1][k] > 10)
+            if (p.reseau[i + 1][k] == 0 || p.reseau[i + 1][k] > 10)
             {
                 prec = 1;
             }
@@ -177,16 +219,16 @@ int EvolutionLigne(int i, int *valeurs, int **reseau)
             {
                 prec = 5;
             }
-            if (k + 1 < valeurs[1])
+            if (k + 1 < p.valeurs[1])
             {
-                reseau[i][k] = prec;
-                reseau[i][k + 1] = 3;
+                p.reseau[i][k] = prec;
+                p.reseau[i][k + 1] = 3;
                 return 1;
             }
             else
             {
-                reseau[i][k] = prec;
-                valeurs[2]--;
+                p.reseau[i][k] = prec;
+                p.valeurs[2]--;
                 return 1;
             }
         }
@@ -194,15 +236,15 @@ int EvolutionLigne(int i, int *valeurs, int **reseau)
     return (0);
 }
 
-int EvolutionColonne(int j, int *valeurs, int **reseau)
+int EvolutionColonne(int j, plateau p)
 {
     int prec;
-    for (int k = valeurs[0] - 1; k >= 0; k--)
+    for (int k = p.valeurs[0] - 1; k >= 0; k--)
     {
-        if (reseau[k][j] == 4)
+        if (p.reseau[k][j] == 4)
         {
 
-            if (reseau[k][j + 1] == 0 || reseau[k][j + 1] > 10)
+            if (p.reseau[k][j + 1] == 0 || p.reseau[k][j + 1] > 10)
             {
                 prec = 2;
             }
@@ -211,63 +253,63 @@ int EvolutionColonne(int j, int *valeurs, int **reseau)
                 prec = 5;
             }
 
-            if (k + 1 < valeurs[0])
+            if (k + 1 < p.valeurs[0])
             {
-                reseau[k][j] = prec;
-                reseau[k + 1][j] = 4;
+                p.reseau[k][j] = prec;
+                p.reseau[k + 1][j] = 4;
                 return 1;
             }
             else
             {
-                reseau[k][j] = prec;
-                valeurs[2]--;
+                p.reseau[k][j] = prec;
+                p.valeurs[2]--;
                 return 1;
             }
         }
     }
     return (0);
 }
-int changeFeu(int *valeurs, int **reseau)
+int changeFeu(plateau p)
 {
     int evo = 0;
-    for (int i = 0; i < valeurs[0]; i++)
-        for (int j = 0; j < valeurs[1]; j++)
+    for (int i = 0; i < p.valeurs[0]; i++)
+        for (int j = 0; j < p.valeurs[1]; j++)
         {
-            if (reseau[i][j] == 5)
+            if (p.reseau[i][j] == 5)
             {
-                reseau[i][j] = 6;
+                p.reseau[i][j] = 6;
                 evo = 1;
             }
-            else if (reseau[i][j] == 51)
+            else if (p.reseau[i][j] == 51)
             {
-                reseau[i][j] = 61;
+                p.reseau[i][j] = 61;
                 evo = 1;
             }
-            else if (reseau[i][j] == 52)
+            else if (p.reseau[i][j] == 52)
             {
-                reseau[i][j] = 62;
+                p.reseau[i][j] = 62;
                 evo = 1;
             }
         }
     return evo;
 }
-int EvolutionSeq(int *valeurs, int **reseau)
+int EvolutionSeq(plateau p)
 {
     int evo = 0;
-    int lignes = valeurs[0];
-    int colonnes = valeurs[1];
+    int lignes = p.valeurs[0];
+    int colonnes = p.valeurs[1];
     for (int i = 0; i < lignes; i++)
     {
-        if (reseau[i][0] > 0 && reseau[i][0] < 10)
+        if (p.reseau[i][0] > 0 && p.reseau[i][0] < 10)
         {
-            evo = EvolutionLigne(i, valeurs, reseau);
+            evo = EvolutionLigne(i, p);
             if (evo != 0)
             {
                 return 1;
             }
         }
     }
-    evo = changeFeu(valeurs, reseau);
+    evo = changeFeu(p);
     if (evo != 0)
     {
         return 1;
@@ -275,9 +317,9 @@ int EvolutionSeq(int *valeurs, int **reseau)
 
     for (int j = 0; j < colonnes; j++)
     {
-        if (reseau[0][j] > 0 && reseau[0][j] < 10)
+        if (p.reseau[0][j] > 0 && p.reseau[0][j] < 10)
         {
-            evo = EvolutionColonne(j, valeurs, reseau);
+            evo = EvolutionColonne(j, p);
             if (evo != 0)
             {
                 return 1;
@@ -287,45 +329,136 @@ int EvolutionSeq(int *valeurs, int **reseau)
     return 0;
 }
 
-void GenerationThreads(int *valeurs, int **reseau, int **ListeVehicules)
+void GenerationThreads(plateau p, int **ListeVehicules)
 {
     int cpt = 0;
-    for (int i = 0; i < valeurs[0]; i++)
+    for (int i = 0; i < p.valeurs[0]; i++)
     {
-        for (int j = 0; j < valeurs[1]; j++)
+        for (int j = 0; j < p.valeurs[1]; j++)
         {
-            if (reseau[i][j] == 3 || reseau[i][j] == 4)
+            if (p.reseau[i][j] == 3 || p.reseau[i][j] == 4)
             {
                 ListeVehicules[cpt][0] = i;
                 ListeVehicules[cpt][1] = j;
-                ListeVehicules[cpt][2] = reseau[i][j];
+                ListeVehicules[cpt][2] = p.reseau[i][j];
                 cpt++;
             }
         }
     }
 }
 
+void *sequ_feux(void *arg)
+{
+    plateau *p = (plateau *)arg;
+    sleep(5);
+    pthread_mutex_lock(&dmutex);
+    for (int i = 0; i < p->valeurs[0]; i++)
+    {
+        for (int j = 0; j < p->valeurs[1]; j++)
+        {
+            if (p->reseau[i][j] == 5)
+            {
+                p->reseau[i][j] = 6;
+            }
+            else if (p->reseau[i][j] == 51)
+            {
+                p->reseau[i][j] = 61;
+            }
+            else if (p->reseau[i][j] == 52)
+            {
+                p->reseau[i][j] = 62;
+            }
+            else if (p->reseau[i][j] == 6)
+            {
+                p->reseau[i][j] = 5;
+            }
+            else if (p->reseau[i][j] == 61)
+            {
+                p->reseau[i][j] = 51;
+            }
+            else if (p->reseau[i][j] == 62)
+            {
+                p->reseau[i][j] = 52;
+            }
+        }
+    }
+    Affichage(*p);
+    pthread_mutex_unlock(&dmutex);
+}
+
+int evo_voiture(plateau p, int *voiture)
+{
+    if (voiture[2] == 3)
+    {
+        if (voiture[0] >= (p.valeurs[0]-1))
+        {
+            p.reseau[voiture[0]][voiture[1]] = 1;
+            return (0);
+        }
+        else
+        {
+            p.reseau[voiture[0]][voiture[1]] = 1;
+            voiture[0]++;
+            p.reseau[voiture[0]][voiture[1]] = 3;
+            return (1);
+        }
+    }
+    else if (voiture[2] == 4)
+    {
+        if (voiture[1] == p.valeurs[1]-1)
+        {
+            p.reseau[voiture[0]][voiture[1]] = 2;
+            return (0);
+        }
+        else
+        {
+            p.reseau[voiture[0]][voiture[1]] = 2;
+            voiture[1]++;
+            p.reseau[voiture[0]][voiture[1]] = 3;
+            return (1);
+        }
+    }
+    return(-1);
+}
+
+void *create_voiture(void *arg)
+{
+    plateau *p = (plateau *)arg;
+    int voiture[3];
+    pthread_mutex_lock(&dmutex);
+    Generation_voiture_thread(p, voiture);
+    pthread_mutex_unlock(&dmutex);
+    int evo = 1;
+    while (evo)
+    {
+        pthread_mutex_lock(&dmutex);
+        evo = evo_voiture(*p, voiture);
+        Affichage(*p);
+        pthread_mutex_unlock(&dmutex);
+    }
+}
+
 int main()
 {
     /*Définition des variables principales*/
-    int valeurs[5];
-    Ouverture(valeurs);
-    int lignes = valeurs[0];
-    int colonnes = valeurs[1];
+    plateau p;
+    Ouverture(&p);
+    int lignes = p.valeurs[0];
+    int colonnes = p.valeurs[1];
 
     srand(time(NULL));
 
     // Création du tableau dynamique
-    int **reseau = (int **)malloc(lignes * sizeof(int *));
+    p.reseau = (int **)malloc(lignes * sizeof(int *));
     for (int i = 0; i < lignes; i++)
     {
-        reseau[i] = (int *)malloc(colonnes * sizeof(int));
+        p.reseau[i] = (int *)malloc(colonnes * sizeof(int));
     }
     for (int i = 0; i < lignes; i++)
     {
         for (int j = 0; j < colonnes; j++)
         {
-            reseau[i][j] = 0;
+            p.reseau[i][j] = 0;
         }
     }
 
@@ -336,25 +469,26 @@ int main()
     if (menu == 1)
     {
 
-        Generation(valeurs, reseau);
-        Affichage(valeurs, reseau);
+        Generation(p);
+        Generation_voiture(p);
+        Affichage(p);
         int evo = 1;
         while (evo != 0)
         {
-            evo = EvolutionSeq(valeurs, reseau);
-            Affichage(valeurs, reseau);
+            evo = EvolutionSeq(p);
+            Affichage(p);
         }
     }
     else if (menu == 2)
     {
-        Generation(valeurs, reseau);
-        int **ListeVehicules = (int **)malloc(valeurs[2] * sizeof(int *));
-        for (int i = 0; i < valeurs[2]; i++)
-        {
-            ListeVehicules[i] = (int *)malloc(3 * sizeof(int));
-        }
-        GenerationThreads(valeurs, reseau, ListeVehicules);
-        Affichage(valeurs,reseau);
-    }
+        Generation(p);
+        Affichage(p);
+        pthread_t feux;
+        pthread_t voiture;
+        pthread_create(&feux, NULL, sequ_feux, &p);
+        pthread_create(&voiture, NULL, create_voiture, &p);
+        pthread_join(voiture, NULL);
+        pthread_join(feux, NULL);
+}
     return 0;
 }
